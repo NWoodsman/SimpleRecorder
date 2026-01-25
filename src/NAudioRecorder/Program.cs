@@ -1,11 +1,6 @@
-﻿// See https://aka.ms/new-console-template for more information
-using NAudio.CoreAudioApi;
+﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using NAudio.Wave.Compression;
 using NAudio.Wave.SampleProviders;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using static System.Console;
 
 namespace NAudioRecorder;
@@ -29,19 +24,17 @@ class Program
 
 	static Task Main(string[] args)
 	{
-		(int in_id, int out_id) ids;
+		int mic_id;
 		var cts = new CancellationTokenSource();
 
 		if (args.Length == 1 && args[0] == "setup")
 		{
-			ids = Setup();
+			mic_id = Setup();
 		}
 		else
 		{
-			ids = ConfigToIDs();
+			mic_id = ConfigToID();
 		}
-
-		start = DateTime.Now;
 
 		CancelKeyPress += (_, args) =>
 		{
@@ -50,13 +43,11 @@ class Program
 			args.Cancel = true;
 		};
 
-		//WaveFormat fmt = new WaveFormat(44100, 16, 1);
-
 		loopback = new WasapiLoopbackCapture();
 
 		waveIn = new NAudio.Wave.WaveInEvent
 		{
-			DeviceNumber = ids.in_id,
+			DeviceNumber = mic_id,
 			BufferMilliseconds = 100,
 			WaveFormat = loopback.WaveFormat
 		};
@@ -70,7 +61,8 @@ class Program
 
 		var def = e.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 
-		
+		start = DateTime.Now;
+
 		string iso = $"{start:yyyy-MM-ddTHH-mm-ss}";
 
 		inpath =Path.Combine(outputFolder, $".{iso}_mic.wav");
@@ -137,6 +129,9 @@ class Program
 			stereoFile.Dispose();
 			stereoFile = null;
 
+			silenceOut.Dispose();
+			silenceOut = null;
+
 			using (var reader1 = new AudioFileReader(inpath))
 			{
 				using (var reader2 = new AudioFileReader(stereopath))
@@ -176,7 +171,7 @@ class Program
 		}
 	}
 
-	static (int in_id, int out_id) Setup()
+	static int Setup()
 	{
 		Directory.CreateDirectory(outputFolder);
 
@@ -192,31 +187,13 @@ class Program
 
 		if (!ok) userExit("Cancelled setting an input.");
 
-		/*MMDeviceEnumerator e = new MMDeviceEnumerator();
-
-		var endpoints = e.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
-
-		Console.WriteLine();
-		Console.WriteLine();
-
-
-		for (int i  = 0; i < endpoints.Count; i++)
-		{
-			var dev = endpoints[i];
-			Console.WriteLine($"{i} , {dev.DeviceFriendlyName}");
-		}
-
-		var stereo_ok = UserInputToStereoDevice(endpoints.Count, out int stereo_id, out var stereo_device, endpoints);
-
-		if (!ok) userExit("Cancelled setting a stereo source");*/
-
 		File.WriteAllText(config, $"{mic_id}\n{-1}");
 		File.SetAttributes(config, File.GetAttributes(config) | FileAttributes.Hidden);
 
-		return (mic_id, -1);
+		return mic_id;
 	}
 
-	static (int input_id, int output_id) ConfigToIDs()
+	static int ConfigToID()
 	{
 		if (!File.Exists(config))
 		{
@@ -225,42 +202,14 @@ class Program
 
 		var lines = File.ReadAllLines(config);
 
-		if (lines.Length != 2) userExit("Error, expected two lines in the config file. Run setup to fix the malformed config file.");
+		if (lines.Length != 1) userExit("Error, expected one line in the config file. Run setup to fix the malformed config file.");
 
 		bool inparsed = int.TryParse(lines[0], out int inresult);
 
 		if (!inparsed) userExit("Error, config line 1 is not an integer. Run setup to fix the malformed config file.");
 
-		bool outparsed = int.TryParse(lines[1], out int outresult);
-
-		if (!outparsed) userExit("Error, config line 2 is not an integer. Run setup to fix the malformed config file.");
-
-		return (inresult, outresult);
+		return inresult;
 	}
-
-
-	static bool UserInputToStereoDevice(int maxCount, out int dev_id, out MMDevice device, MMDeviceCollection devices)
-	{
-		var dev_index = GetStereoDevice(maxCount);
-
-		device = devices[dev_index];
-
-		var ok = validateStereoDevice(dev_index, device);
-
-		if (!ok)
-		{
-			device = null;
-			dev_id = -1;
-			return UserInputToStereoDevice(maxCount, out dev_id, out device, devices);
-		}
-		else
-		{
-			dev_id = dev_index;
-			return true;
-		}
-		
-	}
-
 
 	static bool InputToDevice(int devCount, out WaveInCapabilities devicecaps, out int dev_id)
 	{
@@ -303,57 +252,6 @@ class Program
 		return validateRecDevice(i, device);
 	}
 
-	static bool validateStereoDevice(int i, MMDevice device)
-	{
-		Console.WriteLine();
-		Console.WriteLine($"Selected {i} , {device.FriendlyName}; Is this correct? Y/N");
-
-		var result = Console.ReadKey();
-
-		if (result.Key == ConsoleKey.Y) return true;
-		else if (result.Key == ConsoleKey.N) return false;
-		else if (result.Key == ConsoleKey.Escape) userExit("User quit the stereo device selection");
-
-		return validateStereoDevice(i, device);
-	}
-
-	static int GetStereoDevice(int max)
-	{
-		Console.WriteLine();
-		Console.WriteLine("Enter the number of the stereo device to listen to:");
-		Console.WriteLine();
-		var rawinput = Console.ReadLine();
-
-		if (rawinput == "quit" || rawinput == "q")
-		{
-			userExit("User quit device selection.");
-		}
-		if (!int.TryParse(rawinput, out var int_result))
-		{
-			Console.WriteLine("Error, input an integer corresponding with a device. Try again.");
-			return GetRecDevice(max);
-		}
-
-		if (int_result > max - 1)
-		{
-			Console.WriteLine();
-			Console.WriteLine($"Error, number is too large. Enter a number between 0 and {max - 1}. Try again.");
-
-			return GetRecDevice(max);
-		}
-
-		if (int_result < 0)
-		{
-			Console.WriteLine();
-			Console.WriteLine($"Error, number must be positive. Enter a number between 0 and {max - 1}. Try again.");
-
-			return GetRecDevice(max);
-		}
-
-
-		return int_result;
-	}
-
 	static int GetRecDevice(int max)
 	{
 		Console.WriteLine();
@@ -394,114 +292,3 @@ class Program
 
 
 }
-
-
-
-
-
-
-/*
-
-
-
-
-
-MMDeviceEnumerator enumerator = new();
-
-var es = enumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active);
-
-for (int i = 0; i < es.Count; i++)
-{
-	var e = es[i];
-	Console.WriteLine($"{i} , {e.FriendlyName}");
-}
-
-var device = InputToDevice(out var int_id);
-
-
-Console.WriteLine();
-Console.WriteLine($"Selected {device.FriendlyName}");
-
-
-var waveSource = new NAudio.Wave.WaveInEvent
-{
-	DeviceNumber = int_id,
-	WaveFormat = new WaveFormat(44100, 16, 1),
-	BufferMilliseconds = 20
-};
-
-var outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "NAudio");
-Directory.CreateDirectory(outputFolder);
-var outputFilePath = Path.Combine(outputFolder, "recorded.wav");
-
-var waveFile = new WaveFileWriter(outputFilePath, waveSource.WaveFormat);
-
-waveSource.DataAvailable += new EventHandler<WaveInEventArgs>(waveSource_DataAvailable);
-waveSource.RecordingStopped += new EventHandler<StoppedEventArgs>(waveSource_RecordingStopped);
-
-
-
-waveSource.StartRecording();
-
-
-
-
-
-
-*//*void Record()
-{
-	var outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "NAudio");
-	Directory.CreateDirectory(outputFolder);
-	var outputFilePath = Path.Combine(outputFolder, "recorded.wav");
-	var capture = new WasapiLoopbackCapture();
-	var writer = new WaveFileWriter(outputFilePath, capture.WaveFormat);
-
-	capture.RecordingStopped += (s, a) =>
-	{
-		writer.Dispose();
-		writer = null;
-		capture.Dispose();
-	};
-
-	capture.DataAvailable += (s, a) =>
-	{
-		writer.Write(a.Buffer, 0, a.BytesRecorded);
-		if (writer.Position > capture.WaveFormat.AverageBytesPerSecond * 20)
-		{
-			capture.StopRecording();
-		}
-	};
-
-	capture.StartRecording();
-
-	while (capture.CaptureState != NAudio.CoreAudioApi.CaptureState.Stopped)
-	{
-		Thread.Sleep(500);
-	}
-}*//*
-
-void waveSource_DataAvailable(object sender, WaveInEventArgs e)
-{
-	if (waveFile != null)
-	{
-		waveFile.Write(e.Buffer, 0, e.BytesRecorded);
-		waveFile.Flush();
-	}
-}
-
-void waveSource_RecordingStopped(object sender, StoppedEventArgs e)
-{
-	if (waveSource != null)
-	{
-		waveSource.Dispose();
-		waveSource = null;
-	}
-
-	if (waveFile != null)
-	{
-		waveFile.Dispose();
-		waveFile = null;
-	}
-
-	StartBtn.Enabled = true;
-}*/
