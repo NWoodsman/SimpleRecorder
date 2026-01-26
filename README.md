@@ -1,7 +1,7 @@
 # SimpleRecorder
 
 ## What it is:
-A simple, barebones, "just works" audio recorder for capturing microphone and PC stereo output.
+A simple, barebones, "just works" audio recorder for capturing combined audio recording of microphone and speakers.
 
 ## How to install
 
@@ -11,7 +11,7 @@ The project is currently build with .Net 9. Download the .Net 9 SDK if you are b
 
 ### Building
 
-Currently requires .Net 9 SDK. Clone the repo and run `dotnet build` in the folder.
+Currently requires .Net 9 SDK. Install the SDK. Clone the repo and run `dotnet build` in the folder.
 
 ### Download
 
@@ -38,3 +38,19 @@ The app is built atop `NAudio` using `WasapiLoopbackCapture` and `WaveInEvent`.
 All application operations occur in the `<user>\Music\SimpleRecorder` folder. A `.config` hidden file is saved in the folder to remember your mic device preference.
 
 The application records two temporary tracks, one for microphone sound, one for PC sound; the tracks are saved into the folder. Upon exiting the console window, the tracks are mixed into one `.wav` file and saved to `Music\SimpleRecorder` using ISO 8601 date format. 
+
+**Note:** The app will likely not work if you have a software audio mixer like Voicemeeter.
+
+### License
+
+MIT License. 
+
+### Attribution
+
+Thanks to Mike Hadlow for his simple event loop. 
+
+https://mikehadlow.com/posts/2021-07-09-simple-console-loop/
+
+StackOverflow: Capture console exit.
+
+https://stackoverflow.com/questions/474679/capture-console-exit-c-sharp
