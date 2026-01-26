@@ -1,6 +1,7 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using System.Runtime.InteropServices;
 using static System.Console;
 
 namespace SimpleRecorder;
@@ -22,8 +23,42 @@ class Program
 	static WaveOutEvent silenceOut;
 	static WasapiLoopbackCapture loopback;
 
+	static bool isRecording = false;
+
+	[DllImport("Kernel32")]
+	private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
+
+	private delegate bool EventHandler(CtrlType sig);
+	static EventHandler _handler;
+
+	enum CtrlType
+	{
+		CTRL_C_EVENT = 0,
+		CTRL_BREAK_EVENT = 1,
+		CTRL_CLOSE_EVENT = 2,
+		CTRL_LOGOFF_EVENT = 5,
+		CTRL_SHUTDOWN_EVENT = 6
+	}
+
+	private static bool Handler(CtrlType sig)
+	{
+		switch (sig)
+		{
+			case CtrlType.CTRL_C_EVENT:
+			case CtrlType.CTRL_LOGOFF_EVENT:
+			case CtrlType.CTRL_SHUTDOWN_EVENT:
+			case CtrlType.CTRL_CLOSE_EVENT:
+			default:
+				CloseAndWrite();
+				return false;
+		}
+	}
+
 	static Task Main(string[] args)
 	{
+		_handler += new EventHandler(Handler);
+		SetConsoleCtrlHandler(_handler, true);
+
 		int mic_id;
 		var cts = new CancellationTokenSource();
 
@@ -76,6 +111,7 @@ class Program
 
 		loopback.DataAvailable += Loopback_DataAvailable;
 
+		isRecording = true;
 		silenceOut.Play();
 		waveIn.StartRecording();
 		loopback.StartRecording();
@@ -113,44 +149,52 @@ class Program
 		}
 		catch (TaskCanceledException)
 		{
-			waveIn.StopRecording();
-			loopback.StopRecording();
-			silenceOut.Stop();
-
-			waveIn.Dispose();
-			waveIn = null;
-
-			loopback.Dispose();
-			loopback = null;
-
-			waveFile.Dispose();
-			waveFile = null;
-
-			stereoFile.Dispose();
-			stereoFile = null;
-
-			silenceOut.Dispose();
-			silenceOut = null;
-
-			using (var reader1 = new AudioFileReader(inpath))
-			{
-				using (var reader2 = new AudioFileReader(stereopath))
-				{
-					var mixer = new MixingSampleProvider([reader1, reader2]);
-					WaveFileWriter.CreateWaveFile16(finalpath, mixer);
-				}
-			}
-
-
-			File.Delete(inpath);
-			File.Delete(stereopath);
-
-			Environment.Exit(0);
+			CloseAndWrite();
 		}
 		catch (Exception exception)
 		{
 			WriteLine(exception.ToString());
 		}
+	}
+
+
+
+	static void CloseAndWrite()
+	{
+		if (!isRecording) return;
+		isRecording = false;
+
+		waveIn.StopRecording();
+		loopback.StopRecording();
+		silenceOut.Stop();
+
+		waveIn.Dispose();
+		waveIn = null;
+
+		loopback.Dispose();
+		loopback = null;
+
+		waveFile.Dispose();
+		waveFile = null;
+
+		stereoFile.Dispose();
+		stereoFile = null;
+
+		silenceOut.Dispose();
+		silenceOut = null;
+
+		using (var reader1 = new AudioFileReader(inpath))
+		{
+			using (var reader2 = new AudioFileReader(stereopath))
+			{
+				var mixer = new MixingSampleProvider([reader1, reader2]);
+				WaveFileWriter.CreateWaveFile16(finalpath, mixer);
+			}
+		}
+
+
+		File.Delete(inpath);
+		File.Delete(stereopath);
 	}
 
 	static void waveIn_DataAvailable(object sender, WaveInEventArgs e)
