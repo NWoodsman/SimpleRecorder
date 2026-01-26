@@ -15,6 +15,7 @@ class Program
 	static ISampleProvider silenceprovider;
 
 	static DateTime start = DateTime.Now;
+	static DateTime end;
 
 	static WaveFileWriter waveFile;
 	static WaveFileWriter stereoFile;
@@ -132,13 +133,9 @@ class Program
 				int cursorpos = Console.CursorTop;
 				Console.SetCursorPosition(0,cursorpos);
 
-				var time = DateTime.Now;
+				end = DateTime.Now;
 
-				var delta = time - start;
-
-				string format = @"hh\:mm\:ss";
-
-				string content =$"Recording...{delta.ToString(format)}";
+				string content =$"Recording...{deltaToString()}";
 
 				string wslen = new string(' ', Console.BufferWidth - content.Length);
 
@@ -157,6 +154,7 @@ class Program
 		}
 	}
 
+	static string deltaToString() => (end - start).ToString(@"hh\:mm\:ss");
 
 
 	static void CloseAndWrite()
@@ -195,6 +193,10 @@ class Program
 
 		File.Delete(inpath);
 		File.Delete(stereopath);
+
+		Console.WriteLine();
+		Console.WriteLine();
+		Console.WriteLine($"Saved {deltaToString()} to {finalpath}");
 	}
 
 	static void waveIn_DataAvailable(object sender, WaveInEventArgs e)
