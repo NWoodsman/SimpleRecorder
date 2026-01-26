@@ -3,7 +3,7 @@ using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using static System.Console;
 
-namespace NAudioRecorder;
+namespace SimpleRecorder;
 class Program
 {
 	static string outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "SimpleRecorder");
