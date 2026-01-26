@@ -30,6 +30,8 @@ Your recordings can be found in the `<user>\Music\SimpleRecorder` folder.
 After the first run, the app stores your mic device preference and will immediately begin recording once launched.
 
 The app is designed to be extremely fast to start recording on subsequent uses after the initial setup.
+#### **Note: closing the console window by pressing the X window button is not guaranteed to result in a successful saved recording. The `Ctrl+C` keypress is the intended means to save and close.**
+
 
 ### Technical
 
@@ -40,6 +42,8 @@ All application operations occur in the `<user>\Music\SimpleRecorder` folder. A 
 The application records two temporary tracks, one for microphone sound, one for PC sound; the tracks are saved into the folder. Upon exiting the console window, the tracks are mixed into one `.wav` file and saved to `Music\SimpleRecorder` using ISO 8601 date format. 
 
 **Note:** The app will likely not work if you have a software audio mixer like Voicemeeter.
+
+---
 
 ### License
 
