@@ -37,11 +37,11 @@ The app is designed to be extremely fast to start recording on subsequent uses a
 
 The app is built atop `NAudio` using `WasapiLoopbackCapture` and `WaveInEvent`.
 
-All application operations occur in the `<user>\Music\SimpleRecorder` folder. A `.config` hidden file is saved in the folder to remember your mic device preference.
+All files are saved in the `<user>\Music\SimpleRecorder` folder. A `.config` hidden file is saved in the `<user>\AppData\Local\SimpleRecorder` folder.
 
 The application records two temporary tracks, one for microphone sound, one for PC sound; the tracks are saved into the folder. Upon exiting the console window, the tracks are mixed into one `.wav` file and saved to `Music\SimpleRecorder` using ISO 8601 date format. 
 
-**Note:** The app will likely not work if you have a software audio mixer like Voicemeeter.
+**Note:** The app will possibly conflict with a software audio mixer like Voicemeeter.
 
 ---
 
