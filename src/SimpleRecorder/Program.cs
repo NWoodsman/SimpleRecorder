@@ -8,7 +8,8 @@ namespace SimpleRecorder;
 class Program
 {
 	static string outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "SimpleRecorder");
-	static string config = Path.Combine(outputFolder, ".config");
+	static string configFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SimpleRecorder");
+	static string config = Path.Combine(configFolder, ".config");
 	static string stereopath = string.Empty;
 	static string inpath = string.Empty;
 	static string finalpath = string.Empty;
@@ -215,7 +216,7 @@ class Program
 
 	static (int id,string device_name) Setup()
 	{
-		Directory.CreateDirectory(outputFolder);
+		Directory.CreateDirectory(configFolder);
 
 		var inCount = NAudio.Wave.WaveInEvent.DeviceCount;
 
