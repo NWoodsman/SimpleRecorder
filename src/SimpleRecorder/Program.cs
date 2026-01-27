@@ -60,16 +60,16 @@ class Program
 		_handler += new EventHandler(Handler);
 		SetConsoleCtrlHandler(_handler, true);
 
-		int mic_id;
+		(int mic_id, string name) id_info;
 		var cts = new CancellationTokenSource();
 
 		if (args.Length == 1 && args[0] == "setup")
 		{
-			mic_id = Setup();
+			id_info = Setup();
 		}
 		else
 		{
-			mic_id = ConfigToID();
+			id_info = ConfigToID();
 		}
 
 		CancelKeyPress += (_, args) =>
@@ -83,7 +83,7 @@ class Program
 
 		waveIn = new NAudio.Wave.WaveInEvent
 		{
-			DeviceNumber = mic_id,
+			DeviceNumber = id_info.mic_id,
 			BufferMilliseconds = 100,
 			WaveFormat = loopback.WaveFormat
 		};
@@ -92,10 +92,6 @@ class Program
 
 		silenceOut = new WaveOutEvent();
 		silenceOut.Init(silenceprovider);
-
-		MMDeviceEnumerator e = new MMDeviceEnumerator();
-
-		var def = e.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 
 		start = DateTime.Now;
 
@@ -217,7 +213,7 @@ class Program
 		}
 	}
 
-	static int Setup()
+	static (int id,string device_name) Setup()
 	{
 		Directory.CreateDirectory(outputFolder);
 
@@ -233,13 +229,13 @@ class Program
 
 		if (!ok) userExit("Cancelled setting an input.");
 
-		File.WriteAllText(config, $"{mic_id}");
+		File.WriteAllText(config, $"{device.ProductName}");
 		File.SetAttributes(config, File.GetAttributes(config) | FileAttributes.Hidden);
 
-		return mic_id;
+		return (mic_id,device.ProductName);
 	}
 
-	static int ConfigToID()
+	static (int id, string device_name) ConfigToID()
 	{
 		if (!File.Exists(config))
 		{
@@ -250,11 +246,29 @@ class Program
 
 		if (lines.Length != 1) userExit("Error, expected one line in the config file. Run setup to fix the malformed config file.");
 
-		bool inparsed = int.TryParse(lines[0], out int inresult);
+		string maybe_name = lines[0];
 
-		if (!inparsed) userExit("Error, config line 1 is not an integer. Run setup to fix the malformed config file.");
+		int device_id = -1;
 
-		return inresult;
+		var inCount = NAudio.Wave.WaveInEvent.DeviceCount;
+
+		for (int i = 0; i < inCount; i++)
+		{
+			var caps = WaveInEvent.GetCapabilities(i);
+			if (string.Equals(caps.ProductName, maybe_name))
+			{
+				device_id = i;
+				break;
+			}
+		}
+
+		if (device_id == -1)
+		{
+			Console.WriteLine($"The device stored in the config file is no longer recognized. That device was {maybe_name} and is not currently an available option. Did you disable it? The app will now continue to setup to pick a new input device.\n\n");
+			return Setup();
+		}
+
+		return (device_id,maybe_name);
 	}
 
 	static bool InputToDevice(int devCount, out WaveInCapabilities devicecaps, out int dev_id)
