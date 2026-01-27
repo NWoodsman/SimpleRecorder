@@ -233,7 +233,7 @@ class Program
 
 		if (!ok) userExit("Cancelled setting an input.");
 
-		File.WriteAllText(config, $"{mic_id}\n{-1}");
+		File.WriteAllText(config, $"{mic_id}");
 		File.SetAttributes(config, File.GetAttributes(config) | FileAttributes.Hidden);
 
 		return mic_id;
