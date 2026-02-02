@@ -33,19 +33,14 @@ internal static class Repair
 	{
 		Console.WriteLine($"Repairing files in {outputFolder}:\n\n");
 
-		var files = Directory.GetFiles(outputFolder).Select(file => (file, Path.GetFileName(file))).ToArray();
+		var files = Directory.GetFiles(outputFolder)
+			.Select(file => (file, Path.GetFileName(file)))
+			.Select(f => (f, FileRegex.Match(f.Item2))).Where(f => f.Item2.Success)
+			.Select(match => Deconstruct(match.f.file, match.Item2))
+			.GroupBy(m => m.dateMatch)
+			.Select(g => TryParse(g, outputFolder));
 
-		var dotfiles = files.Select(f => (f,FileRegex.Match(f.Item2))).Where(f=>f.Item2.Success).ToArray();
-
-		var matchgroups = dotfiles
-			.Select(match => Deconstruct(match.f.file,match.Item2)).ToArray();
-
-		var groups = matchgroups
-			.GroupBy(m => m.Item3).ToArray();
-
-		var parsed = groups.Select(g => TryParse(g,outputFolder)).ToArray();
-
-		foreach (var f in parsed)
+		foreach (var f in files)
 		{
 			if (f.IsSuccess)
 			{
