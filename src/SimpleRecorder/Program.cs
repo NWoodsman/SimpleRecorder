@@ -13,6 +13,8 @@ class Program
 	
 	static string stereopath = string.Empty;
 	static string inpath = string.Empty;
+
+	// Any variables named iso are referring to ISO date format. 
 	static string iso = string.Empty;
 
 	static ISampleProvider silenceprovider;
@@ -120,7 +122,6 @@ class Program
 				config = Config.FromFile();
 				break;
 		}
-
 
 		CancelKeyPress += (_, args) =>
 		{
